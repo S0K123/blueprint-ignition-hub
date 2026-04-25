@@ -98,18 +98,60 @@ type TabId = (typeof tabs)[number]["id"];
 function Results() {
   const [tab, setTab] = useState<TabId>("blueprint");
   const [mode, setMode] = useState<Mode>("Builder");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const md = `# Blueprint: Attention Is All You Need\n\n**Mode:** ${mode}\n\n` +
+      blueprintsByMode[mode].map((s, i) =>
+        `## ${i + 1}. ${s.action}\n\n` +
+        `- **Purpose:** ${s.purpose}\n` +
+        `- **Tools:** ${s.tools.join(", ")}\n` +
+        `- **Expected:** ${s.expected}\n` +
+        `- **Difficulty:** ${s.difficulty} · **Time:** ${s.time}\n` +
+        `- ⚠️ **Common mistake:** ${s.mistake}\n`
+      ).join("\n");
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    toast.success("Blueprint copied as Markdown");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="min-h-screen">
       <Nav />
+      <Toaster theme="dark" position="bottom-right" />
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-6">
-          <div className="text-xs uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" /> Results · Run #4471
+        {/* Paper context header */}
+        <div className="glass rounded-2xl p-5 mb-6 flex items-center gap-4 flex-wrap">
+          <div className="w-12 h-12 rounded-xl bg-gradient-hero/20 ring-1 ring-primary/40 flex items-center justify-center">
+            <FileText className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Blueprint for <span className="text-gradient">"Attention Is All You Need"</span>
-          </h1>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Source paper</div>
+            <div className="font-semibold truncate">Attention Is All You Need · Vaswani et al. · 2017</div>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-md bg-emerald/15 text-emerald border border-emerald/30 font-semibold">87% confidence</span>
+            <span className="px-2.5 py-1 rounded-md bg-secondary border border-border text-muted-foreground">Run #4471</span>
+          </div>
+        </div>
+
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5" /> Results
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Your <span className="text-gradient">build blueprint</span>
+            </h1>
+          </div>
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-2 glass border border-primary/40 px-4 py-2.5 rounded-xl text-sm font-semibold hover:shadow-glow transition-shadow"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald" /> : <Copy className="w-4 h-4" />}
+            {copied ? "Copied!" : "Copy as Markdown"}
+          </button>
         </div>
 
         <div className="mb-6">
