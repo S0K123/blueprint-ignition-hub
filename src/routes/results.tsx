@@ -333,3 +333,124 @@ function Field({ icon: Icon, label, value }: { icon: any; label: string; value: 
     </div>
   );
 }
+
+const codeFiles: Record<string, string> = {
+  "src/model/attention.py": `import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ScaledDotProductAttention(nn.Module):
+    """Eq. 1 from Vaswani et al. 2017."""
+
+    def forward(self, q, k, v, mask=None):
+        d_k = q.size(-1)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+        attn = F.softmax(scores, dim=-1)
+        return torch.matmul(attn, v), attn
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model: int, n_heads: int):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.d_k = d_model // n_heads
+        self.n_heads = n_heads
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+        self.attn = ScaledDotProductAttention()
+`,
+  "src/serving/api.py": `from fastapi import FastAPI
+from pydantic import BaseModel
+from .batcher import Batcher
+
+app = FastAPI(title="ProtoPapers Inference")
+batcher = Batcher(max_batch=16, max_wait_ms=10)
+
+
+class InferRequest(BaseModel):
+    prompt: str
+    max_tokens: int = 128
+
+
+@app.post("/infer")
+async def infer(req: InferRequest):
+    out = await batcher.submit(req.prompt, req.max_tokens)
+    return {"completion": out}
+`,
+  "src/retrieval/store_pgvector.py": `from sqlalchemy import text
+from .embed import embed_text
+
+async def upsert_doc(conn, doc_id: str, content: str):
+    vec = await embed_text(content)
+    await conn.execute(
+        text("INSERT INTO docs (id, content, embedding) VALUES (:id, :c, :v) "
+             "ON CONFLICT (id) DO UPDATE SET embedding = :v"),
+        {"id": doc_id, "c": content, "v": vec},
+    )
+
+async def search(conn, query: str, k: int = 5):
+    qv = await embed_text(query)
+    rows = await conn.execute(
+        text("SELECT id, content FROM docs ORDER BY embedding <=> :q LIMIT :k"),
+        {"q": qv, "k": k},
+    )
+    return rows.fetchall()
+`,
+  "infra/modal_app.py": `import modal
+
+stub = modal.Stub("protopaper-mvp")
+image = modal.Image.debian_slim().pip_install("torch", "transformers", "fastapi")
+
+@stub.function(image=image, gpu="A10G", keep_warm=1)
+@modal.asgi_app()
+def fastapi_app():
+    from src.serving.api import app
+    return app
+`,
+};
+
+function CodeScaffoldTab() {
+  const fileNames = Object.keys(codeFiles);
+  const [active, setActive] = useState(fileNames[0]);
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 animate-fade-in">
+      <div className="glass rounded-2xl p-4">
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+          <Code2 className="w-3.5 h-3.5" /> Repo · 14 files
+        </div>
+        <pre className="text-[11px] font-mono text-muted-foreground leading-relaxed mb-4 whitespace-pre">
+{codeScaffold}
+        </pre>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Preview file</div>
+        <div className="space-y-1">
+          {fileNames.map((n) => (
+            <button
+              key={n}
+              onClick={() => setActive(n)}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md font-mono transition-colors ${
+                active === n
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground hover:bg-secondary/60 border border-transparent"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-background/40">
+          <span className="font-mono text-xs">{active}</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">generated</span>
+        </div>
+        <pre className="text-xs md:text-sm font-mono p-5 overflow-auto leading-relaxed text-foreground/90 max-h-[520px]">
+{codeFiles[active]}
+        </pre>
+      </div>
+    </div>
+  );
+}
