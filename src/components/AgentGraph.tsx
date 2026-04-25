@@ -21,12 +21,14 @@ const edges: [number, number][] = [
   [0, 1], [1, 2], [1, 3], [2, 4], [3, 4], [4, 5], [5, 6], [5, 7], [6, 7], [0, 7], [2, 5], [3, 6],
 ];
 
-export function AgentGraph() {
-  const [active, setActive] = useState(0);
+export function AgentGraph({ active: controlled, completed = [] }: { active?: number; completed?: number[] } = {}) {
+  const [internal, setInternal] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setActive((a) => (a + 1) % agents.length), 1200);
+    if (controlled !== undefined) return;
+    const t = setInterval(() => setInternal((a) => (a + 1) % agents.length), 1200);
     return () => clearInterval(t);
-  }, []);
+  }, [controlled]);
+  const active = controlled !== undefined ? controlled : internal;
   return (
     <div className="relative w-full aspect-square max-w-[560px] mx-auto">
       {/* Glow center */}
