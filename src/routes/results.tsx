@@ -4,8 +4,10 @@ import { Nav } from "@/components/Nav";
 import { Mermaid } from "@/components/Mermaid";
 import { RealVsSimulated } from "@/components/RealVsSimulated";
 import {
-  AlertTriangle, CheckCircle2, Clock, Wrench, Target, Sparkles, Code2, Network, Layers, Gauge, FileCode,
+  AlertTriangle, CheckCircle2, Clock, Wrench, Target, Sparkles, Code2, Network, Layers, Gauge, FileCode, FileText, Copy, Check,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/results")({
   component: Results,
