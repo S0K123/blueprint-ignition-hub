@@ -280,19 +280,7 @@ function Results() {
           </div>
         )}
 
-        {tab === "code" && (
-          <div className="glass rounded-2xl p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-primary" /> Generated Repo Structure
-              </h2>
-              <span className="text-xs text-muted-foreground">14 files · ~620 LOC</span>
-            </div>
-            <pre className="text-xs md:text-sm font-mono bg-background/70 border border-border rounded-xl p-5 overflow-auto leading-relaxed text-muted-foreground">
-{codeScaffold}
-            </pre>
-          </div>
-        )}
+        {tab === "code" && <CodeScaffoldTab />}
 
         {tab === "confidence" && (
           <div className="space-y-4 animate-fade-in">
