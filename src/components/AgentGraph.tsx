@@ -59,6 +59,7 @@ export function AgentGraph({ active: controlled, completed = [] }: { active?: nu
       {agents.map((a, i) => {
         const p = positions[i];
         const isActive = i === active;
+        const isDone = completed.includes(i);
         return (
           <div
             key={a.id}
@@ -69,15 +70,18 @@ export function AgentGraph({ active: controlled, completed = [] }: { active?: nu
               className={`relative rounded-2xl border backdrop-blur-md px-3 py-2 text-xs font-semibold transition-all duration-500 ${
                 isActive
                   ? "bg-card border-primary/60 scale-110 shadow-glow"
+                  : isDone
+                  ? "bg-card/80 border-emerald/40 text-foreground"
                   : "bg-card/60 border-border text-muted-foreground"
               }`}
             >
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <span
                   className={`w-2 h-2 rounded-full ${isActive ? "animate-pulse-soft" : ""}`}
-                  style={{ background: a.color }}
+                  style={{ background: isDone && !isActive ? "var(--emerald)" : a.color }}
                 />
                 {a.label}
+                {isDone && !isActive && <span className="text-emerald text-[10px]">✓</span>}
               </div>
             </div>
           </div>
