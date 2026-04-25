@@ -88,6 +88,21 @@ function Landing() {
             Or pick a demo paper below — no input needed
           </div>
         </div>
+
+        {/* Metrics strip */}
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
+          {[
+            { v: "60s", l: "Paper → Blueprint" },
+            { v: "8", l: "Specialized agents" },
+            { v: "3", l: "Blueprint modes" },
+            { v: "87%", l: "Avg. confidence" },
+          ].map((m) => (
+            <div key={m.l} className="glass rounded-xl p-4">
+              <div className="text-2xl font-bold text-gradient">{m.v}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{m.l}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Demo paper cards */}

@@ -4,8 +4,10 @@ import { Nav } from "@/components/Nav";
 import { Mermaid } from "@/components/Mermaid";
 import { RealVsSimulated } from "@/components/RealVsSimulated";
 import {
-  AlertTriangle, CheckCircle2, Clock, Wrench, Target, Sparkles, Code2, Network, Layers, Gauge, FileCode,
+  AlertTriangle, CheckCircle2, Clock, Wrench, Target, Sparkles, Code2, Network, Layers, Gauge, FileCode, FileText, Copy, Check,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/results")({
   component: Results,
@@ -96,18 +98,60 @@ type TabId = (typeof tabs)[number]["id"];
 function Results() {
   const [tab, setTab] = useState<TabId>("blueprint");
   const [mode, setMode] = useState<Mode>("Builder");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const md = `# Blueprint: Attention Is All You Need\n\n**Mode:** ${mode}\n\n` +
+      blueprintsByMode[mode].map((s, i) =>
+        `## ${i + 1}. ${s.action}\n\n` +
+        `- **Purpose:** ${s.purpose}\n` +
+        `- **Tools:** ${s.tools.join(", ")}\n` +
+        `- **Expected:** ${s.expected}\n` +
+        `- **Difficulty:** ${s.difficulty} · **Time:** ${s.time}\n` +
+        `- ⚠️ **Common mistake:** ${s.mistake}\n`
+      ).join("\n");
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    toast.success("Blueprint copied as Markdown");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="min-h-screen">
       <Nav />
+      <Toaster theme="dark" position="bottom-right" />
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-6">
-          <div className="text-xs uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" /> Results · Run #4471
+        {/* Paper context header */}
+        <div className="glass rounded-2xl p-5 mb-6 flex items-center gap-4 flex-wrap">
+          <div className="w-12 h-12 rounded-xl bg-gradient-hero/20 ring-1 ring-primary/40 flex items-center justify-center">
+            <FileText className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Blueprint for <span className="text-gradient">"Attention Is All You Need"</span>
-          </h1>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Source paper</div>
+            <div className="font-semibold truncate">Attention Is All You Need · Vaswani et al. · 2017</div>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-md bg-emerald/15 text-emerald border border-emerald/30 font-semibold">87% confidence</span>
+            <span className="px-2.5 py-1 rounded-md bg-secondary border border-border text-muted-foreground">Run #4471</span>
+          </div>
+        </div>
+
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5" /> Results
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Your <span className="text-gradient">build blueprint</span>
+            </h1>
+          </div>
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-2 glass border border-primary/40 px-4 py-2.5 rounded-xl text-sm font-semibold hover:shadow-glow transition-shadow"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald" /> : <Copy className="w-4 h-4" />}
+            {copied ? "Copied!" : "Copy as Markdown"}
+          </button>
         </div>
 
         <div className="mb-6">
@@ -236,19 +280,7 @@ function Results() {
           </div>
         )}
 
-        {tab === "code" && (
-          <div className="glass rounded-2xl p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-primary" /> Generated Repo Structure
-              </h2>
-              <span className="text-xs text-muted-foreground">14 files · ~620 LOC</span>
-            </div>
-            <pre className="text-xs md:text-sm font-mono bg-background/70 border border-border rounded-xl p-5 overflow-auto leading-relaxed text-muted-foreground">
-{codeScaffold}
-            </pre>
-          </div>
-        )}
+        {tab === "code" && <CodeScaffoldTab />}
 
         {tab === "confidence" && (
           <div className="space-y-4 animate-fade-in">
@@ -298,6 +330,127 @@ function Field({ icon: Icon, label, value }: { icon: any; label: string; value: 
         <Icon className="w-3 h-3" /> {label}
       </div>
       <div>{value}</div>
+    </div>
+  );
+}
+
+const codeFiles: Record<string, string> = {
+  "src/model/attention.py": `import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ScaledDotProductAttention(nn.Module):
+    """Eq. 1 from Vaswani et al. 2017."""
+
+    def forward(self, q, k, v, mask=None):
+        d_k = q.size(-1)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+        attn = F.softmax(scores, dim=-1)
+        return torch.matmul(attn, v), attn
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model: int, n_heads: int):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.d_k = d_model // n_heads
+        self.n_heads = n_heads
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+        self.attn = ScaledDotProductAttention()
+`,
+  "src/serving/api.py": `from fastapi import FastAPI
+from pydantic import BaseModel
+from .batcher import Batcher
+
+app = FastAPI(title="ProtoPapers Inference")
+batcher = Batcher(max_batch=16, max_wait_ms=10)
+
+
+class InferRequest(BaseModel):
+    prompt: str
+    max_tokens: int = 128
+
+
+@app.post("/infer")
+async def infer(req: InferRequest):
+    out = await batcher.submit(req.prompt, req.max_tokens)
+    return {"completion": out}
+`,
+  "src/retrieval/store_pgvector.py": `from sqlalchemy import text
+from .embed import embed_text
+
+async def upsert_doc(conn, doc_id: str, content: str):
+    vec = await embed_text(content)
+    await conn.execute(
+        text("INSERT INTO docs (id, content, embedding) VALUES (:id, :c, :v) "
+             "ON CONFLICT (id) DO UPDATE SET embedding = :v"),
+        {"id": doc_id, "c": content, "v": vec},
+    )
+
+async def search(conn, query: str, k: int = 5):
+    qv = await embed_text(query)
+    rows = await conn.execute(
+        text("SELECT id, content FROM docs ORDER BY embedding <=> :q LIMIT :k"),
+        {"q": qv, "k": k},
+    )
+    return rows.fetchall()
+`,
+  "infra/modal_app.py": `import modal
+
+stub = modal.Stub("protopaper-mvp")
+image = modal.Image.debian_slim().pip_install("torch", "transformers", "fastapi")
+
+@stub.function(image=image, gpu="A10G", keep_warm=1)
+@modal.asgi_app()
+def fastapi_app():
+    from src.serving.api import app
+    return app
+`,
+};
+
+function CodeScaffoldTab() {
+  const fileNames = Object.keys(codeFiles);
+  const [active, setActive] = useState(fileNames[0]);
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 animate-fade-in">
+      <div className="glass rounded-2xl p-4">
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+          <Code2 className="w-3.5 h-3.5" /> Repo · 14 files
+        </div>
+        <pre className="text-[11px] font-mono text-muted-foreground leading-relaxed mb-4 whitespace-pre">
+{codeScaffold}
+        </pre>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Preview file</div>
+        <div className="space-y-1">
+          {fileNames.map((n) => (
+            <button
+              key={n}
+              onClick={() => setActive(n)}
+              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-md font-mono transition-colors ${
+                active === n
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground hover:bg-secondary/60 border border-transparent"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-background/40">
+          <span className="font-mono text-xs">{active}</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">generated</span>
+        </div>
+        <pre className="text-xs md:text-sm font-mono p-5 overflow-auto leading-relaxed text-foreground/90 max-h-[520px]">
+{codeFiles[active]}
+        </pre>
+      </div>
     </div>
   );
 }

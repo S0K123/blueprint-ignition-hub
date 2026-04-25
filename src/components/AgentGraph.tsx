@@ -21,12 +21,14 @@ const edges: [number, number][] = [
   [0, 1], [1, 2], [1, 3], [2, 4], [3, 4], [4, 5], [5, 6], [5, 7], [6, 7], [0, 7], [2, 5], [3, 6],
 ];
 
-export function AgentGraph() {
-  const [active, setActive] = useState(0);
+export function AgentGraph({ active: controlled, completed = [] }: { active?: number; completed?: number[] } = {}) {
+  const [internal, setInternal] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setActive((a) => (a + 1) % agents.length), 1200);
+    if (controlled !== undefined) return;
+    const t = setInterval(() => setInternal((a) => (a + 1) % agents.length), 1200);
     return () => clearInterval(t);
-  }, []);
+  }, [controlled]);
+  const active = controlled !== undefined ? controlled : internal;
   return (
     <div className="relative w-full aspect-square max-w-[560px] mx-auto">
       {/* Glow center */}
@@ -57,6 +59,7 @@ export function AgentGraph() {
       {agents.map((a, i) => {
         const p = positions[i];
         const isActive = i === active;
+        const isDone = completed.includes(i);
         return (
           <div
             key={a.id}
@@ -67,15 +70,18 @@ export function AgentGraph() {
               className={`relative rounded-2xl border backdrop-blur-md px-3 py-2 text-xs font-semibold transition-all duration-500 ${
                 isActive
                   ? "bg-card border-primary/60 scale-110 shadow-glow"
+                  : isDone
+                  ? "bg-card/80 border-emerald/40 text-foreground"
                   : "bg-card/60 border-border text-muted-foreground"
               }`}
             >
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <span
                   className={`w-2 h-2 rounded-full ${isActive ? "animate-pulse-soft" : ""}`}
-                  style={{ background: a.color }}
+                  style={{ background: isDone && !isActive ? "var(--emerald)" : a.color }}
                 />
                 {a.label}
+                {isDone && !isActive && <span className="text-emerald text-[10px]">✓</span>}
               </div>
             </div>
           </div>
