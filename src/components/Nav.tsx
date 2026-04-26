@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { Sparkles, History } from "lucide-react";
 
 export function Nav() {
   const linkCls = "text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md";
@@ -16,6 +16,7 @@ export function Nav() {
           <Link to="/" className={linkCls} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground bg-secondary" }}>Home</Link>
           <Link to="/mission" className={linkCls} activeProps={{ className: "text-foreground bg-secondary" }}>Mission Control</Link>
           <Link to="/results" className={linkCls} activeProps={{ className: "text-foreground bg-secondary" }}>Results</Link>
+          <Link to="/history" className={linkCls} activeProps={{ className: "text-foreground bg-secondary" }}>History</Link>
         </nav>
         <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
           <span className="w-2 h-2 rounded-full bg-emerald animate-pulse-soft" />

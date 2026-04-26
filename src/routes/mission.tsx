@@ -3,29 +3,30 @@ import { useEffect, useState } from "react";
 import { Nav } from "@/components/Nav";
 import { AgentGraph, agents } from "@/components/AgentGraph";
 import { ArrowRight, Brain, CheckCircle2, Loader2, FileText, Timer, Zap } from "lucide-react";
+import { getSelectedPaper } from "@/lib/paper-context";
+import { generateTopicBundle } from "@/lib/protopapers-engine";
+import { setCurrentRun } from "@/lib/run-context";
+import { getResearchState } from "@/lib/research-context";
 
 export const Route = createFileRoute("/mission")({
   component: Mission,
 });
 
-const thoughts = [
-  { agent: "Parser", text: "Extracted abstract, 12 sections, 47 references. Detected core concept: scaled dot-product attention." },
-  { agent: "Synthesizer", text: "Distilled 3 implementable primitives: token embeddings, multi-head attention, position encoding." },
-  { agent: "Architect", text: "Proposed system: encoder-decoder w/ residual streams. Drafting service boundaries…" },
-  { agent: "Stack Picker", text: "Recommending PyTorch + HuggingFace + FastAPI. Inference layer: vLLM. Storage: Postgres + pgvector." },
-  { agent: "Coder", text: "Scaffolding repo: src/model, src/training, src/serving. 14 files queued for generation." },
-  { agent: "QA Critic", text: "Flagged: O(n²) attention will OOM on >2k tokens. Suggesting FlashAttention-2 fallback." },
-  { agent: "Doc Writer", text: "Composing beginner walkthrough — 9 steps, ~3h to first inference." },
-  { agent: "Confidence", text: "Cross-checking blueprint coherence… score: 0.87. Flagging 2 medium-risk steps." },
-];
-
 function Mission() {
+  const paper = getSelectedPaper();
+  const research = getResearchState();
+  const bundle = generateTopicBundle(paper, research.extraction);
+  const thoughts = agents.map((agent, index) => ({
+    agent: agent.label,
+    text: bundle.thoughtStream[index] ?? `${agent.label}: Processing ${paper.title}...`,
+  }));
   const [step, setStep] = useState(-1); // index of current agent
   const [log, setLog] = useState<{ agent: string; text: string; t: number }[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [tokens, setTokens] = useState(0);
 
   useEffect(() => {
+    setCurrentRun({ paper, bundle });
     let i = 0;
     const tick = setInterval(() => {
       if (i < thoughts.length) {
@@ -63,11 +64,18 @@ function Mission() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Now prototyping</div>
-            <div className="font-semibold truncate">Attention Is All You Need · Vaswani et al. · 2017</div>
+            <div className="font-semibold truncate">
+              {paper.title}
+              {paper.authors ? ` · ${paper.authors}` : ""}
+              {paper.year ? ` · ${paper.year}` : ""}
+            </div>
           </div>
           <div className="flex items-center gap-4 text-xs">
             <Stat icon={Timer} label="Elapsed" value={`${elapsed.toFixed(1)}s`} />
             <Stat icon={Zap} label="Tokens" value={tokens.toLocaleString()} />
+            <span className="px-2 py-1 rounded-md border border-border text-muted-foreground">
+              {research.mode === "research_parse" ? "Research Parse Mode" : "Quick Demo Mode"}
+            </span>
           </div>
         </div>
 
@@ -103,7 +111,7 @@ function Mission() {
             <div className="h-full bg-gradient-hero transition-all duration-700 rounded-full" style={{ width: `${progress}%` }} />
           </div>
         </div>
-
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left: graph + agent status */}
           <div className="space-y-6">

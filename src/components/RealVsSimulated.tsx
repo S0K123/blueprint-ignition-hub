@@ -1,11 +1,16 @@
 import { CheckCircle2, FlaskConical } from "lucide-react";
 
 const items = [
-  { label: "Paper parsing", real: true },
-  { label: "Agent orchestration", real: true },
+  { label: "Paper selection flow", real: true },
+  { label: "PDF text parsing", real: true },
+  { label: "Section header extraction", real: true },
+  { label: "Agent orchestration", real: false },
   { label: "Blueprint generation", real: false },
+  { label: "Architecture diagram generation", real: false },
+  { label: "Tech stack recommendations", real: false },
+  { label: "Code scaffold previews", real: false },
   { label: "Live progress logs", real: false },
-  { label: "Code scaffolding", real: true },
+  { label: "Markdown export", real: true },
   { label: "Confidence scoring", real: false },
 ];
 

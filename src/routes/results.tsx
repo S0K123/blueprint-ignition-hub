@@ -2,12 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Nav } from "@/components/Nav";
 import { Mermaid } from "@/components/Mermaid";
-import { RealVsSimulated } from "@/components/RealVsSimulated";
 import {
   AlertTriangle, CheckCircle2, Clock, Wrench, Target, Sparkles, Code2, Network, Layers, Gauge, FileCode, FileText, Copy, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { getSelectedPaper } from "@/lib/paper-context";
+import { getCurrentRun } from "@/lib/run-context";
+import { generateTopicBundle } from "@/lib/protopapers-engine";
+import { getResearchState } from "@/lib/research-context";
+import { ExtractionPreview } from "@/components/ExtractionPreview";
 
 export const Route = createFileRoute("/results")({
   component: Results,
@@ -87,6 +91,7 @@ const mermaidChart = `graph TD
 
 const tabs = [
   { id: "blueprint", label: "Blueprint", icon: Layers },
+  { id: "research", label: "Research Extraction", icon: FileText },
   { id: "architecture", label: "Architecture", icon: Network },
   { id: "stack", label: "Tech Stack", icon: Wrench },
   { id: "code", label: "Code Scaffold", icon: FileCode },
@@ -96,13 +101,28 @@ const tabs = [
 type TabId = (typeof tabs)[number]["id"];
 
 function Results() {
+  const selectedPaper = getSelectedPaper();
+  const research = getResearchState();
+  const run = getCurrentRun();
+  const generatedBundle = generateTopicBundle(selectedPaper, research.extraction);
+  const fallbackBundle = {
+    modeSteps: generatedBundle.modeSteps ?? blueprintsByMode,
+    mermaidChart: generatedBundle.mermaidChart || mermaidChart,
+    techStack: generatedBundle.techStack.length > 0 ? generatedBundle.techStack : techStack,
+    codeScaffold: generatedBundle.codeScaffold || codeScaffold,
+    codeFiles: Object.keys(generatedBundle.codeFiles).length > 0 ? generatedBundle.codeFiles : codeFiles,
+    confidence: generatedBundle.confidence ?? 87,
+    runId: generatedBundle.runId || "#4471",
+  };
+  const bundle = run?.bundle ?? fallbackBundle;
+  const paper = run?.paper ?? selectedPaper;
   const [tab, setTab] = useState<TabId>("blueprint");
   const [mode, setMode] = useState<Mode>("Builder");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const md = `# Blueprint: Attention Is All You Need\n\n**Mode:** ${mode}\n\n` +
-      blueprintsByMode[mode].map((s, i) =>
+    const md = `# Blueprint: ${paper.title}\n\n**Mode:** ${mode}\n\n` +
+      bundle.modeSteps[mode].map((s, i) =>
         `## ${i + 1}. ${s.action}\n\n` +
         `- **Purpose:** ${s.purpose}\n` +
         `- **Tools:** ${s.tools.join(", ")}\n` +
@@ -128,11 +148,19 @@ function Results() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Source paper</div>
-            <div className="font-semibold truncate">Attention Is All You Need · Vaswani et al. · 2017</div>
+            <div className="font-semibold truncate">
+              {paper.title}
+              {paper.authors ? ` · ${paper.authors}` : ""}
+              {paper.year ? ` · ${paper.year}` : ""}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <span className="px-2.5 py-1 rounded-md bg-emerald/15 text-emerald border border-emerald/30 font-semibold">87% confidence</span>
-            <span className="px-2.5 py-1 rounded-md bg-secondary border border-border text-muted-foreground">Run #4471</span>
+            <span className="px-2.5 py-1 rounded-md bg-emerald/15 text-emerald border border-emerald/30 font-semibold">
+              {bundle.confidence}% confidence
+            </span>
+            <span className="px-2.5 py-1 rounded-md bg-secondary border border-border text-muted-foreground">
+              Run {bundle.runId}
+            </span>
           </div>
         </div>
 
@@ -154,13 +182,12 @@ function Results() {
           </button>
         </div>
 
-        <div className="mb-6">
-          <RealVsSimulated />
-        </div>
-
+        
         {/* Tabs */}
         <div className="glass rounded-2xl p-1.5 inline-flex gap-1 mb-6 flex-wrap">
-          {tabs.map((t) => {
+          {tabs
+            .filter((t) => t.id !== "research" || research.extraction)
+            .map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
             return (
@@ -176,7 +203,7 @@ function Results() {
                 <Icon className="w-4 h-4" /> {t.label}
               </button>
             );
-          })}
+            })}
         </div>
 
         {tab === "blueprint" && (
@@ -199,7 +226,7 @@ function Results() {
             </div>
 
             <div className="space-y-4">
-              {blueprintsByMode[mode].map((s, i) => (
+              {bundle.modeSteps[mode].map((s, i) => (
                 <div
                   key={i}
                   className="glass rounded-2xl p-6 hover:border-primary/40 transition-colors animate-slide-up"
@@ -249,18 +276,24 @@ function Results() {
           </div>
         )}
 
+        {tab === "research" && research.extraction && (
+          <div className="animate-fade-in">
+            <ExtractionPreview extraction={research.extraction} />
+          </div>
+        )}
+
         {tab === "architecture" && (
           <div className="glass rounded-2xl p-6 animate-fade-in">
             <h2 className="font-semibold mb-4">System Architecture</h2>
             <div className="rounded-xl bg-background/60 p-4 overflow-auto">
-              <Mermaid chart={mermaidChart} />
+              <Mermaid chart={bundle.mermaidChart} />
             </div>
           </div>
         )}
 
         {tab === "stack" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-            {techStack.map((s, i) => (
+            {bundle.techStack.map((s, i) => (
               <div
                 key={s.layer}
                 className="glass rounded-2xl p-6 animate-slide-up"
@@ -280,16 +313,16 @@ function Results() {
           </div>
         )}
 
-        {tab === "code" && <CodeScaffoldTab />}
+        {tab === "code" && <CodeScaffoldTab codeScaffold={bundle.codeScaffold} codeFiles={bundle.codeFiles} />}
 
         {tab === "confidence" && (
           <div className="space-y-4 animate-fade-in">
             <div className="glass rounded-2xl p-8 text-center">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Overall Confidence</div>
-              <div className="text-7xl font-bold text-gradient">87%</div>
+              <div className="text-7xl font-bold text-gradient">{bundle.confidence}%</div>
               <div className="text-sm text-muted-foreground mt-2">High — blueprint cross-validated by 3 critic agents.</div>
               <div className="mt-6 max-w-md mx-auto h-2 bg-secondary rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-hero rounded-full" style={{ width: "87%" }} />
+                <div className="h-full bg-gradient-hero rounded-full" style={{ width: `${bundle.confidence}%` }} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -413,7 +446,13 @@ def fastapi_app():
 `,
 };
 
-function CodeScaffoldTab() {
+function CodeScaffoldTab({
+  codeScaffold,
+  codeFiles,
+}: {
+  codeScaffold: string;
+  codeFiles: Record<string, string>;
+}) {
   const fileNames = Object.keys(codeFiles);
   const [active, setActive] = useState(fileNames[0]);
   return (
