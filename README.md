@@ -349,6 +349,6 @@ If you encounter any issues or have questions:
 
 ---
 
-**Built with ❤️ by [S0K123](https://github.com/S0K123)**
+**Built by [S0K123](https://github.com/S0K123)**
 
 *Transforming research into reality, one paper at a time.*
